@@ -30,10 +30,10 @@ data "aws_ami" "amazon-linux-2" {
 }
 
 resource "aws_instance" "app_server" {
-  ami           = "ami-830c94e3"
+  ami = "${data.aws_ami.amazon-linux-2.id}"
   instance_type = "t2.micro"
 
   tags = {
-    Name = "Terraform_Github_Ansible_Project"
+    Name = "Terraform_Github_Ansible"
   }
 }

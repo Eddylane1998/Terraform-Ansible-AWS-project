@@ -10,7 +10,7 @@ terraform {
 }
 
 provider "aws" {
-  region  = "us-west-2"
+  region  = "eu-west-2"
 }
 
 data "aws_ami" "amazon-linux-2" {
@@ -34,6 +34,6 @@ resource "aws_instance" "app_server" {
   instance_type = "t2.micro"
 
   tags = {
-    Name = "ExampleAppServerInstance"
+    Name = "Terraform_Github_Ansible_Project"
   }
 }

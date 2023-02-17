@@ -13,6 +13,7 @@ locals {
   vpc_id    = "vpc-0ff2bf3f6a6b0abe6"
   subnet_id = "subnet-076ed149f5c3edf12"
   ssh_user  = "Ubuntu"
+  key_name  = "devops"
 }
 
 provider "aws" {
@@ -65,9 +66,9 @@ resource "aws_instance" "nginx" {
   ami = "${data.aws_ami.amazon-linux-2.id}"
   subnet_id                   = local.subnet_id
   instance_type               = "t2.micro"
-  key_name                    = "devops"
   associate_public_ip_address = true
   security_groups             = [aws_security_group.nginx.id]
+  key_name                    = local.key_name
 
 provisioner "remote-exec" {
   inline = ["echo 'wait until ssh is ready'"]
@@ -75,13 +76,13 @@ provisioner "remote-exec" {
   connection {
     type        = "ssh"
     user        = local.ssh_user
-    private_key = "devops"
+    private_key = local.key_name
     host        = aws_instance.nginx.public_ip
   }
 }
 
 provisioner "local-exec" {
-  command = "ansible-playbook -i ${aws_instance.nginx.public_ip}"
+  command = "ansible-playbook -i ${aws_instance.nginx.public_ip}, --private_key ${local.key_name} nginx.yaml"
 }
 
   tags = {

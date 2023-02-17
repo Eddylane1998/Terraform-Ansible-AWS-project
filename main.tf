@@ -68,11 +68,6 @@ resource "aws_instance" "nginx" {
   associate_public_ip_address = true
   security_groups = [aws_security_group.nginx.id]
 
-  tags = {
-    Name = "Terraform_Github_Ansible"
-  }
-}
-
 provisioner "remote-exec" {
   inline = ["echo 'wait until ssh is ready'"]
 
@@ -85,6 +80,11 @@ provisioner "remote-exec" {
 
 provisioner "local-exec" {
   command = "ansible-playbook -i ${aws_instance.nginx.public_ip}"
+}
+
+  tags = {
+    Name = "Terraform_Github_Ansible"
+  }
 }
 
 output "nginx_ip" {

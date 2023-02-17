@@ -63,18 +63,20 @@ resource "aws_security_group" "nginx" {
 
 resource "aws_instance" "nginx" {
   ami = "${data.aws_ami.amazon-linux-2.id}"
-  subnet_id = local.subnet_id
-  instance_type = "t2.micro"
+  subnet_id                   = local.subnet_id
+  instance_type               = "t2.micro"
+  key_name                    = "devops"
   associate_public_ip_address = true
-  security_groups = [aws_security_group.nginx.id]
+  security_groups             = [aws_security_group.nginx.id]
 
 provisioner "remote-exec" {
   inline = ["echo 'wait until ssh is ready'"]
 
   connection {
-    type = "ssh"
-    user = local.ssh_user
-    host = aws_instance.nginx.public_ip
+    type        = "ssh"
+    user        = local.ssh_user
+    private_key = "devops"
+    host        = aws_instance.nginx.public_ip
   }
 }
 

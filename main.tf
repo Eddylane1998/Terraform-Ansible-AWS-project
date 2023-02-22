@@ -25,10 +25,11 @@ required_providers {
 }
 
 locals {
-  vpc_id    = "vpc-0ff2bf3f6a6b0abe6"
-  subnet_id = "subnet-076ed149f5c3edf12"
-  ssh_user  = "Ubuntu"
-  key_name  = "devops"
+  vpc_id       = "vpc-0ff2bf3f6a6b0abe6"
+  subnet_id    = "subnet-076ed149f5c3edf12"
+  ssh_user     = "Ubuntu"
+  key_name     = "devops"
+  cluster_name = "eks-clusters"
 }
 
 provider "aws" {
@@ -38,6 +39,9 @@ provider "aws" {
 data "aws_ami" "amazon-linux-2" {
  most_recent = true
 
+data "aws_availability_zones" "available" {
+  state = "available"
+}
 
  filter {
    name   = "owner-alias"
@@ -77,16 +81,78 @@ resource "aws_security_group" "nginx" {
   }
 }
 
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "3.19.0"
+
+  name = "terraform-vpc"
+
+  cidr = "10.0.0.0/16"
+  azs  = slice(data.aws_availability_zones.available.names, 0, 3)
+
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  public_subnets  = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
+
+  enable_nat_gateway   = true
+  single_nat_gateway   = true
+  enable_dns_hostnames = true
+
+  public_subnet_tags = {
+    "kubernetes.io/cluster/${local.cluster_name}" = "shared"
+    "kubernetes.io/role/elb"                      = 1
+  }
+
+  private_subnet_tags = {
+    "kubernetes.io/cluster/${local.cluster_name}" = "shared"
+    "kubernetes.io/role/internal-elb"             = 1
+  }
+}
+
 resource "aws_instance" "nginx" {
-  ami = "${data.aws_ami.amazon-linux-2.id}"
+  ami                         = "${data.aws_ami.amazon-linux-2.id}"
   subnet_id                   = local.subnet_id
   instance_type               = "t2.micro"
   associate_public_ip_address = true
   security_groups             = [aws_security_group.nginx.id]
   key_name                    = local.key_name
+}
 
-provisioner "remote-exec" {
-  inline = ["echo 'wait until ssh is ready'"]
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "19.5.1"
+
+  cluster_name    = local.cluster_name
+  cluster_version = "1.24"
+
+  vpc_id                         = module.vpc.vpc_id
+  subnet_ids                     = module.vpc.private_subnets
+  cluster_endpoint_public_access = true
+
+  eks_managed_node_group_defaults = {
+      ami = "${data.aws_ami.amazon-linux-2.id}"
+  }
+
+  eks_managed_node_groups = {
+    one = {
+      name = "node-group-1"
+
+      instance_types = ["t2.micro"]
+
+      min_size     = 1
+      max_size     = 3
+      desired_size = 2
+    }
+
+    two = {
+      name = "node-group-2"
+
+      instance_types = ["t2.micro"]
+
+      min_size     = 1
+      max_size     = 2
+      desired_size = 1
+    }
+  }
 
   connection {
     type        = "ssh"
@@ -96,15 +162,7 @@ provisioner "remote-exec" {
   }
 }
 
-provisioner "local-exec" {
-  command = "ansible-playbook -i ${aws_instance.nginx.public_ip}, --private_key ${local.key_name} nginx.yaml"
-}
-
   tags = {
     Name = "Terraform_Github_Ansible"
   }
-}
-
-output "nginx_ip" {
-  value = aws_instance.nginx.public_ip  
 }

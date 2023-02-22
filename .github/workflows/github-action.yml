@@ -29,15 +29,6 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           role-session-name: GitHub-OIDC-TERRAFORM
 
-      - name: Install SSH key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.SSH_KEY }}
-          name: id_rsa # optional
-          known_hosts: unnecessary
-          config: ${{ secrets.CONFIG }} # ssh_config; optional
-          if_key_exists: replace # replace / ignore / fail; optional (defaults to fail)
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
@@ -105,6 +96,13 @@ jobs:
       - name: Terraform Plan Status
         if: steps.plan.outcome == 'failure'
         run: exit 1
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_KEY }}
+          known_hosts: unnecessary
+          if_key_exists: replace # replace / ignore / fail; optional (defaults to fail)
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'

@@ -1,0 +1,15 @@
+---
+    - name: Configure Kubernetes
+      hosts: aws_instance.terraform-ansible-project.public_ip
+
+      tasks:
+
+        - name: Install RMQ
+          become: yes
+          shell: |
+            apt-get update -y
+            apt-get install curl gnupg -y
+        
+        - name: Start 
+          become: yes
+          shell: systemd
